@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,7 +42,7 @@ fun HomeScreen(
             ) {
                 Text(text = stringResource(R.string.add_wine))
             }
-            Button(
+            OutlinedButton(
                 onClick = onListWines,
                 modifier = Modifier
                     .widthIn(max = 320.dp)
