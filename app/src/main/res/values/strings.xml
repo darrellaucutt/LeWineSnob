@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">LeWineSnob</string>
+    <string name="add_wine">Add Wine</string>
+    <string name="list_wines">List Wines</string>
+    <string name="back">Back</string>
+    <string name="brand">Brand</string>
+    <string name="type">Type</string>
+    <string name="varietal">Varietal</string>
+    <string name="region">Region</string>
+    <string name="rating">Rating</string>
+    <string name="bottle_photo">Bottle photo</string>
+    <string name="bottle_photo_hint">Tap to add bottle photo</string>
+    <string name="save_wine">Save Wine</string>
+</resources>
