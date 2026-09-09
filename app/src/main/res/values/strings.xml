@@ -7,6 +7,7 @@
     <string name="type">Type</string>
     <string name="varietal">Varietal</string>
     <string name="region">Region</string>
+    <string name="year">Year</string>
     <string name="rating">Rating</string>
     <string name="bottle_photo">Bottle photo</string>
     <string name="bottle_photo_hint">Tap to add bottle photo</string>

@@ -6,6 +6,7 @@ data class Wine(
     val type: String,
     val varietal: String,
     val region: String,
+    val year: Int? = null,
     val rating: Int,
     val imageUri: String? = null,
 )

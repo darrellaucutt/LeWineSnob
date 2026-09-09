@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -49,6 +50,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -70,6 +72,7 @@ fun AddWineScreen(
     var type by rememberSaveable { mutableStateOf("") }
     var varietal by rememberSaveable { mutableStateOf("") }
     var region by rememberSaveable { mutableStateOf("") }
+    var year by rememberSaveable { mutableStateOf("") }
     var rating by rememberSaveable { mutableIntStateOf(0) }
     var imageUri by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -138,6 +141,16 @@ fun AddWineScreen(
                 label = { Text(text = stringResource(R.string.region)) },
                 singleLine = true
             )
+            OutlinedTextField(
+                value = year,
+                onValueChange = { input ->
+                    year = input.filter { it.isDigit() }.take(4)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(text = stringResource(R.string.year)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
             Text(
                 text = stringResource(R.string.rating),
                 modifier = Modifier.fillMaxWidth(),
@@ -168,6 +181,7 @@ fun AddWineScreen(
                             type = type,
                             varietal = varietal,
                             region = region.trim(),
+                            year = year.toIntOrNull(),
                             rating = rating,
                             imageUri = imageUri
                         )
