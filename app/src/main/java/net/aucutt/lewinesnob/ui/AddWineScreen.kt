@@ -1,7 +1,6 @@
 package net.aucutt.lewinesnob.ui
 
 import android.graphics.BitmapFactory
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -56,10 +55,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import net.aucutt.lewinesnob.R
 import net.aucutt.lewinesnob.data.Wine
+import net.aucutt.lewinesnob.data.WineImageStore
 import net.aucutt.lewinesnob.data.WineOptions
 import net.aucutt.lewinesnob.ui.theme.LeWineSnobTheme
 import java.util.UUID
-import androidx.core.net.toUri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -205,7 +204,7 @@ private fun BottlePhoto(
     val context = LocalContext.current
     val imageBitmap by produceState<ImageBitmap?>(initialValue = null, imageUri) {
         value = imageUri?.let { uriString ->
-            context.contentResolver.openInputStream(uriString.toUri())?.use { stream ->
+            WineImageStore(context).open(uriString)?.use { stream ->
                 BitmapFactory.decodeStream(stream)?.asImageBitmap()
             }
         }

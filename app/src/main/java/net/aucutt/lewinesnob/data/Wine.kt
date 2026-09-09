@@ -1,7 +1,11 @@
 package net.aucutt.lewinesnob.data
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "wines")
 data class Wine(
-    val id: String,
+    @PrimaryKey val id: String,
     val brand: String,
     val type: String,
     val varietal: String,

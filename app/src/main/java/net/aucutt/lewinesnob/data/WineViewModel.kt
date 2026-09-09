@@ -1,16 +1,26 @@
 package net.aucutt.lewinesnob.data
 
-import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import net.aucutt.lewinesnob.LeWineSnobApplication
 
-class WineViewModel : ViewModel() {
-    private val _wines = MutableStateFlow<List<Wine>>(emptyList())
-    val wines: StateFlow<List<Wine>> = _wines.asStateFlow()
+class WineViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository = (application as LeWineSnobApplication).wineRepository
+
+    val wines: StateFlow<List<Wine>> = repository.observeWines().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = emptyList(),
+    )
 
     fun addWine(wine: Wine) {
-        _wines.update { it + wine }
+        viewModelScope.launch {
+            repository.addWine(wine)
+        }
     }
 }
