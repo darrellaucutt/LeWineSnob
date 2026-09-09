@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import net.aucutt.lewinesnob.R
@@ -56,6 +57,7 @@ import net.aucutt.lewinesnob.data.Wine
 import net.aucutt.lewinesnob.data.WineOptions
 import net.aucutt.lewinesnob.ui.theme.LeWineSnobTheme
 import java.util.UUID
+import androidx.core.net.toUri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -138,10 +140,16 @@ fun AddWineScreen(
             )
             Text(
                 text = stringResource(R.string.rating),
-                style = MaterialTheme.typography.titleSmall
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.titleSmall,
+                textAlign = TextAlign.Center
             )
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(
+                    8.dp,
+                    Alignment.CenterHorizontally
+                )
             ) {
                 (1..5).forEach { value ->
                     FilterChip(
@@ -183,7 +191,7 @@ private fun BottlePhoto(
     val context = LocalContext.current
     val imageBitmap by produceState<ImageBitmap?>(initialValue = null, imageUri) {
         value = imageUri?.let { uriString ->
-            context.contentResolver.openInputStream(Uri.parse(uriString))?.use { stream ->
+            context.contentResolver.openInputStream(uriString.toUri())?.use { stream ->
                 BitmapFactory.decodeStream(stream)?.asImageBitmap()
             }
         }
