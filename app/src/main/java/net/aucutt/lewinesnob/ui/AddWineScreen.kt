@@ -1,6 +1,9 @@
 package net.aucutt.lewinesnob.ui
 
+import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,20 +23,22 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -53,11 +58,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import net.aucutt.lewinesnob.R
 import net.aucutt.lewinesnob.data.Wine
 import net.aucutt.lewinesnob.data.WineImageStore
 import net.aucutt.lewinesnob.data.WineOptions
 import net.aucutt.lewinesnob.ui.theme.LeWineSnobTheme
+import java.io.File
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,6 +74,9 @@ fun AddWineScreen(
     onSave: (Wine) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val canTakePhoto = context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
+
     var brand by rememberSaveable { mutableStateOf("") }
     var type by rememberSaveable { mutableStateOf("") }
     var varietal by rememberSaveable { mutableStateOf("") }
@@ -74,11 +84,32 @@ fun AddWineScreen(
     var year by rememberSaveable { mutableStateOf("") }
     var rating by rememberSaveable { mutableIntStateOf(0) }
     var imageUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingCameraUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var showPhotoSourcePicker by rememberSaveable { mutableStateOf(false) }
 
     val photoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         imageUri = uri?.toString()
+    }
+    val takePicture = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            imageUri = pendingCameraUri
+        }
+    }
+
+    fun launchGallery() {
+        photoPicker.launch(
+            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+        )
+    }
+
+    fun launchCamera() {
+        val uri = createCameraImageUri(context)
+        pendingCameraUri = uri.toString()
+        takePicture.launch(uri)
     }
 
     Scaffold(
@@ -109,9 +140,11 @@ fun AddWineScreen(
             BottlePhoto(
                 imageUri = imageUri,
                 onClick = {
-                    photoPicker.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                    )
+                    if (canTakePhoto) {
+                        showPhotoSourcePicker = true
+                    } else {
+                        launchGallery()
+                    }
                 }
             )
             OutlinedTextField(
@@ -193,6 +226,53 @@ fun AddWineScreen(
             }
         }
     }
+
+    if (showPhotoSourcePicker) {
+        PhotoSourceDialog(
+            onTakePhoto = {
+                showPhotoSourcePicker = false
+                launchCamera()
+            },
+            onPickGallery = {
+                showPhotoSourcePicker = false
+                launchGallery()
+            },
+            onDismiss = { showPhotoSourcePicker = false }
+        )
+    }
+}
+
+@Composable
+private fun PhotoSourceDialog(
+    onTakePhoto: () -> Unit,
+    onPickGallery: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = stringResource(R.string.bottle_photo)) },
+        text = {
+            Column {
+                TextButton(
+                    onClick = onTakePhoto,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = stringResource(R.string.take_photo))
+                }
+                TextButton(
+                    onClick = onPickGallery,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = stringResource(R.string.choose_from_gallery))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(R.string.cancel))
+            }
+        }
+    )
 }
 
 @Composable
@@ -272,6 +352,16 @@ private fun DropdownField(
             }
         }
     }
+}
+
+private fun createCameraImageUri(context: Context): Uri {
+    val photoFile = File(context.cacheDir, "camera_${UUID.randomUUID()}.jpg")
+    photoFile.createNewFile()
+    return FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        photoFile,
+    )
 }
 
 @Preview(showBackground = true)
