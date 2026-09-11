@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,8 +24,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -43,8 +46,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,18 +65,21 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import net.aucutt.lewinesnob.R
+import net.aucutt.lewinesnob.data.TastingNote
 import net.aucutt.lewinesnob.data.Wine
 import net.aucutt.lewinesnob.data.WineImageStore
 import net.aucutt.lewinesnob.data.WineOptions
 import net.aucutt.lewinesnob.ui.theme.LeWineSnobTheme
 import java.io.File
+import java.text.DateFormat
+import java.util.Date
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddWineScreen(
     onBack: () -> Unit,
-    onSave: (Wine) -> Unit,
+    onSave: (Wine, List<TastingNote>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -86,6 +94,8 @@ fun AddWineScreen(
     var imageUri by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingCameraUri by rememberSaveable { mutableStateOf<String?>(null) }
     var showPhotoSourcePicker by rememberSaveable { mutableStateOf(false) }
+    var noteDraft by rememberSaveable { mutableStateOf("") }
+    val addedNotes = remember { mutableStateListOf<NoteDraft>() }
 
     val photoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -204,11 +214,44 @@ fun AddWineScreen(
                     )
                 }
             }
+            TastingNotesSection(
+                notes = addedNotes,
+                draft = noteDraft,
+                onDraftChange = { noteDraft = it },
+                onAddNote = {
+                    val text = noteDraft.trim()
+                    if (text.isNotEmpty()) {
+                        addedNotes.add(
+                            NoteDraft(
+                                id = UUID.randomUUID().toString(),
+                                date = System.currentTimeMillis(),
+                                text = text,
+                            )
+                        )
+                        noteDraft = ""
+                    }
+                },
+                onDeleteNote = { addedNotes.remove(it) }
+            )
             Button(
                 onClick = {
+                    val wineId = UUID.randomUUID().toString()
+                    val notesToSave = buildList {
+                        addAll(addedNotes)
+                        val leftover = noteDraft.trim()
+                        if (leftover.isNotEmpty()) {
+                            add(
+                                NoteDraft(
+                                    id = UUID.randomUUID().toString(),
+                                    date = System.currentTimeMillis(),
+                                    text = leftover,
+                                )
+                            )
+                        }
+                    }
                     onSave(
                         Wine(
-                            id = UUID.randomUUID().toString(),
+                            id = wineId,
                             brand = brand.trim(),
                             type = type,
                             varietal = varietal,
@@ -216,7 +259,15 @@ fun AddWineScreen(
                             year = year.toIntOrNull(),
                             rating = rating,
                             imageUri = imageUri
-                        )
+                        ),
+                        notesToSave.map { draft ->
+                            TastingNote(
+                                id = draft.id,
+                                wineId = wineId,
+                                date = draft.date,
+                                notes = draft.text,
+                            )
+                        }
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -239,6 +290,69 @@ fun AddWineScreen(
             },
             onDismiss = { showPhotoSourcePicker = false }
         )
+    }
+}
+
+private data class NoteDraft(
+    val id: String,
+    val date: Long,
+    val text: String,
+)
+
+@Composable
+private fun TastingNotesSection(
+    notes: List<NoteDraft>,
+    draft: String,
+    onDraftChange: (String) -> Unit,
+    onAddNote: () -> Unit,
+    onDeleteNote: (NoteDraft) -> Unit,
+) {
+    val dateFormat = remember { DateFormat.getDateInstance(DateFormat.MEDIUM) }
+
+    Text(
+        text = stringResource(R.string.tasting_notes),
+        modifier = Modifier.fillMaxWidth(),
+        style = MaterialTheme.typography.titleSmall
+    )
+    notes.forEach { note ->
+        OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.padding(start = 16.dp, top = 8.dp, end = 4.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = dateFormat.format(Date(note.date)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = note.text,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                IconButton(onClick = { onDeleteNote(note) }) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.delete_note)
+                    )
+                }
+            }
+        }
+    }
+    OutlinedTextField(
+        value = draft,
+        onValueChange = onDraftChange,
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(text = stringResource(R.string.notes)) },
+        minLines = 3
+    )
+    OutlinedButton(
+        onClick = onAddNote,
+        modifier = Modifier.fillMaxWidth(),
+        enabled = draft.isNotBlank()
+    ) {
+        Text(text = stringResource(R.string.add_note))
     }
 }
 
@@ -368,6 +482,6 @@ private fun createCameraImageUri(context: Context): Uri {
 @Composable
 private fun AddWineScreenPreview() {
     LeWineSnobTheme {
-        AddWineScreen(onBack = {}, onSave = {})
+        AddWineScreen(onBack = {}, onSave = { _, _ -> })
     }
 }

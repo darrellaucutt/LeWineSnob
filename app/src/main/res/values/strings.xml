@@ -14,5 +14,9 @@
     <string name="take_photo">Take photo</string>
     <string name="choose_from_gallery">Choose from gallery</string>
     <string name="cancel">Cancel</string>
+    <string name="tasting_notes">Tasting notes</string>
+    <string name="notes">Notes</string>
+    <string name="add_note">Add note</string>
+    <string name="delete_note">Delete note</string>
     <string name="save_wine">Save Wine</string>
 </resources>

@@ -10,17 +10,20 @@ import kotlinx.coroutines.launch
 import net.aucutt.lewinesnob.LeWineSnobApplication
 
 class WineViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = (application as LeWineSnobApplication).wineRepository
+    private val app = application as LeWineSnobApplication
+    private val wineRepository = app.wineRepository
+    private val tastingNoteRepository = app.tastingNoteRepository
 
-    val wines: StateFlow<List<Wine>> = repository.observeWines().stateIn(
+    val wines: StateFlow<List<Wine>> = wineRepository.observeWines().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = emptyList(),
     )
 
-    fun addWine(wine: Wine) {
+    fun addWine(wine: Wine, notes: List<TastingNote> = emptyList()) {
         viewModelScope.launch {
-            repository.addWine(wine)
+            wineRepository.addWine(wine)
+            notes.forEach { tastingNoteRepository.addNote(it) }
         }
     }
 }

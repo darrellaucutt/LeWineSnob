@@ -49,8 +49,8 @@ private fun LeWineSnobApp(wineViewModel: WineViewModel = viewModel()) {
         composable<AddWineRoute> {
             AddWineScreen(
                 onBack = { navController.popBackStack() },
-                onSave = { wine ->
-                    wineViewModel.addWine(wine)
+                onSave = { wine, notes ->
+                    wineViewModel.addWine(wine, notes)
                     navController.popBackStack()
                 }
             )
