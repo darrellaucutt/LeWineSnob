@@ -50,6 +50,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -74,6 +75,7 @@ import java.io.File
 import java.text.DateFormat
 import java.util.Date
 import java.util.UUID
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,6 +87,9 @@ fun AddWineScreen(
     existingNotes: List<TastingNote> = emptyList(),
     onRatingChange: (Int) -> Unit = {},
     onNoteAdded: (String) -> Unit = {},
+    findCollision: suspend (brand: String, type: String, varietal: String, year: Int?) -> Wine? =
+        { _, _, _, _ -> null },
+    onOpenExisting: (Wine) -> Unit = {},
 ) {
     val context = LocalContext.current
     val canTakePhoto = context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
@@ -103,6 +108,10 @@ fun AddWineScreen(
     var showPhotoSourcePicker by rememberSaveable { mutableStateOf(false) }
     var noteDraft by rememberSaveable { mutableStateOf("") }
     val addedNotes = remember { mutableStateListOf<NoteDraft>() }
+    val coroutineScope = rememberCoroutineScope()
+    var pendingSave by remember { mutableStateOf<Pair<Wine, List<TastingNote>>?>(null) }
+    var collisionWine by remember { mutableStateOf<Wine?>(null) }
+    var isCheckingCollision by remember { mutableStateOf(false) }
 
     val photoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -273,43 +282,36 @@ fun AddWineScreen(
             if (!isViewingExisting) {
                 Button(
                     onClick = {
-                        val wineId = UUID.randomUUID().toString()
-                        val notesToSave = buildList {
-                            addAll(addedNotes)
-                            val leftover = noteDraft.trim()
-                            if (leftover.isNotEmpty()) {
-                                add(
-                                    NoteDraft(
-                                        id = UUID.randomUUID().toString(),
-                                        date = System.currentTimeMillis(),
-                                        text = leftover,
-                                    )
-                                )
+                        val wineAndNotes = buildWineAndNotes(
+                            brand = brand,
+                            type = type,
+                            varietal = varietal,
+                            region = region,
+                            year = year,
+                            rating = rating,
+                            imageUri = imageUri,
+                            addedNotes = addedNotes,
+                            noteDraft = noteDraft,
+                        )
+                        coroutineScope.launch {
+                            isCheckingCollision = true
+                            val collision = findCollision(
+                                wineAndNotes.first.brand,
+                                wineAndNotes.first.type,
+                                wineAndNotes.first.varietal,
+                                wineAndNotes.first.year,
+                            )
+                            isCheckingCollision = false
+                            if (collision != null) {
+                                pendingSave = wineAndNotes
+                                collisionWine = collision
+                            } else {
+                                onSave(wineAndNotes.first, wineAndNotes.second)
                             }
                         }
-                        onSave(
-                            Wine(
-                                id = wineId,
-                                brand = brand.trim(),
-                                type = type,
-                                varietal = varietal,
-                                region = region.trim(),
-                                year = year.toIntOrNull(),
-                                rating = rating,
-                                imageUri = imageUri
-                            ),
-                            notesToSave.map { draft ->
-                                TastingNote(
-                                    id = draft.id,
-                                    wineId = wineId,
-                                    date = draft.date,
-                                    notes = draft.text,
-                                )
-                            }
-                        )
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = brand.isNotBlank()
+                    enabled = brand.isNotBlank() && !isCheckingCollision
                 ) {
                     Text(text = stringResource(R.string.save_wine))
                 }
@@ -330,6 +332,50 @@ fun AddWineScreen(
             onDismiss = { showPhotoSourcePicker = false }
         )
     }
+
+    pendingSave?.let { (wine, notes) ->
+        val existing = collisionWine
+        AlertDialog(
+            onDismissRequest = {
+                pendingSave = null
+                collisionWine = null
+            },
+            title = { Text(text = stringResource(R.string.duplicate_wine)) },
+            text = { Text(text = stringResource(R.string.duplicate_wine_message)) },
+            confirmButton = {
+                Column(horizontalAlignment = Alignment.End) {
+                    TextButton(
+                        onClick = {
+                            pendingSave = null
+                            collisionWine = null
+                            onSave(wine, notes)
+                        }
+                    ) {
+                        Text(text = stringResource(R.string.save_anyway))
+                    }
+                    TextButton(
+                        onClick = {
+                            pendingSave = null
+                            collisionWine = null
+                            if (existing != null) {
+                                onOpenExisting(existing)
+                            }
+                        }
+                    ) {
+                        Text(text = stringResource(R.string.see_original))
+                    }
+                    TextButton(
+                        onClick = {
+                            pendingSave = null
+                            collisionWine = null
+                        }
+                    ) {
+                        Text(text = stringResource(R.string.keep_editing))
+                    }
+                }
+            }
+        )
+    }
 }
 
 private data class NoteDraft(
@@ -337,6 +383,50 @@ private data class NoteDraft(
     val date: Long,
     val text: String,
 )
+
+private fun buildWineAndNotes(
+    brand: String,
+    type: String,
+    varietal: String,
+    region: String,
+    year: String,
+    rating: Int,
+    imageUri: String?,
+    addedNotes: List<NoteDraft>,
+    noteDraft: String,
+): Pair<Wine, List<TastingNote>> {
+    val wineId = UUID.randomUUID().toString()
+    val notesToSave = buildList {
+        addAll(addedNotes)
+        val leftover = noteDraft.trim()
+        if (leftover.isNotEmpty()) {
+            add(
+                NoteDraft(
+                    id = UUID.randomUUID().toString(),
+                    date = System.currentTimeMillis(),
+                    text = leftover,
+                )
+            )
+        }
+    }
+    return Wine(
+        id = wineId,
+        brand = brand.trim(),
+        type = type,
+        varietal = varietal,
+        region = region.trim(),
+        year = year.toIntOrNull(),
+        rating = rating,
+        imageUri = imageUri,
+    ) to notesToSave.map { draft ->
+        TastingNote(
+            id = draft.id,
+            wineId = wineId,
+            date = draft.date,
+            notes = draft.text,
+        )
+    }
+}
 
 @Composable
 private fun TastingNotesSection(

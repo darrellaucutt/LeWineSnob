@@ -13,6 +13,18 @@ interface WineDao {
     @Upsert
     suspend fun upsert(wine: Wine)
 
+    @Query(
+        """
+        SELECT * FROM wines
+        WHERE brand = :brand COLLATE NOCASE
+          AND type = :type COLLATE NOCASE
+          AND varietal = :varietal COLLATE NOCASE
+          AND year IS :year
+        LIMIT 1
+        """
+    )
+    suspend fun findCollision(brand: String, type: String, varietal: String, year: Int?): Wine?
+
     @Query("UPDATE wines SET rating = :rating WHERE id = :id")
     suspend fun updateRating(id: String, rating: Int)
 

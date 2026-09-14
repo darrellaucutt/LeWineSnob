@@ -63,6 +63,15 @@ private fun LeWineSnobApp(wineViewModel: WineViewModel = viewModel()) {
                 onSave = { wine, notes ->
                     wineViewModel.addWine(wine, notes)
                     navController.popBackStack()
+                },
+                findCollision = { brand, type, varietal, year ->
+                    wineViewModel.findCollision(brand, type, varietal, year)
+                },
+                onOpenExisting = { wine ->
+                    navController.navigate(ListWinesRoute) {
+                        popUpTo(AddWineRoute) { inclusive = true }
+                    }
+                    navController.navigate(ViewWineRoute(wine.id))
                 }
             )
         }
