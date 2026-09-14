@@ -21,6 +21,10 @@ class WineViewModel(application: Application) : AndroidViewModel(application) {
         initialValue = emptyList(),
     )
 
+    suspend fun findCollision(brand: String, type: String, varietal: String, year: Int?): Wine? {
+        return wineRepository.findCollision(brand, type, varietal, year)
+    }
+
     fun addWine(wine: Wine, notes: List<TastingNote> = emptyList()) {
         viewModelScope.launch {
             wineRepository.addWine(wine)

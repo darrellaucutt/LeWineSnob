@@ -28,4 +28,9 @@
     <string name="unrated">Unrated</string>
     <string name="rating_value">Rating %1$d</string>
     <string name="no_photo">No photo</string>
+    <string name="duplicate_wine">Duplicate wine</string>
+    <string name="duplicate_wine_message">A wine with this brand, year, varietal, and type is already saved. Save anyway, see the original or keep editing?</string>
+    <string name="save_anyway">Save anyway</string>
+    <string name="see_original">See original</string>
+    <string name="keep_editing">Keep editing</string>
 </resources>
