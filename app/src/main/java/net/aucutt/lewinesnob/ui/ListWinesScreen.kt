@@ -59,6 +59,7 @@ import net.aucutt.lewinesnob.ui.theme.LeWineSnobTheme
 fun ListWinesScreen(
     wines: List<Wine>,
     onBack: () -> Unit,
+    onWineClick: (Wine) -> Unit,
     onDeleteWine: (Wine) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -124,6 +125,7 @@ fun ListWinesScreen(
                     items(filteredWines, key = { it.id }) { wine ->
                         WineListItem(
                             wine = wine,
+                            onClick = { onWineClick(wine) },
                             onDelete = { wineToDelete = wine }
                         )
                     }
@@ -166,6 +168,7 @@ fun ListWinesScreen(
 @Composable
 private fun WineListItem(
     wine: Wine,
+    onClick: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -176,7 +179,10 @@ private fun WineListItem(
         wine.year?.toString(),
     ).joinToString(" · ")
 
-    OutlinedCard(modifier = modifier.fillMaxWidth()) {
+    OutlinedCard(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth()
+    ) {
         Row(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -295,6 +301,7 @@ private fun ListWinesScreenPreview() {
                 ),
             ),
             onBack = {},
+            onWineClick = {},
             onDeleteWine = {},
         )
     }

@@ -13,6 +13,9 @@ interface WineDao {
     @Upsert
     suspend fun upsert(wine: Wine)
 
+    @Query("UPDATE wines SET rating = :rating WHERE id = :id")
+    suspend fun updateRating(id: String, rating: Int)
+
     @Query("DELETE FROM wines WHERE id = :id")
     suspend fun deleteById(id: String)
 }

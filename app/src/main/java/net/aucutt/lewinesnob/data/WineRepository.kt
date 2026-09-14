@@ -11,6 +11,10 @@ class WineRepository(
         wineDao.upsert(wine.copy(imageUri = storedUri))
     }
 
+    suspend fun updateRating(id: String, rating: Int) {
+        wineDao.updateRating(id, rating)
+    }
+
     suspend fun deleteWine(id: String) {
         wineDao.deleteById(id)
         imageStore.delete(id)

@@ -5,12 +5,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
 import net.aucutt.lewinesnob.data.WineViewModel
 import net.aucutt.lewinesnob.ui.AddWineScreen
@@ -26,6 +28,9 @@ private data object AddWineRoute
 
 @Serializable
 private data object ListWinesRoute
+
+@Serializable
+private data class ViewWineRoute(val wineId: String)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,8 +71,29 @@ private fun LeWineSnobApp(wineViewModel: WineViewModel = viewModel()) {
             ListWinesScreen(
                 wines = wines,
                 onBack = { navController.popBackStack() },
+                onWineClick = { wine -> navController.navigate(ViewWineRoute(wine.id)) },
                 onDeleteWine = { wine -> wineViewModel.deleteWine(wine.id) }
             )
+        }
+        composable<ViewWineRoute> { backStackEntry ->
+            val wineId = backStackEntry.toRoute<ViewWineRoute>().wineId
+            val wines by wineViewModel.wines.collectAsState()
+            val wine = wines.find { it.id == wineId }
+            val notes by wineViewModel.notesForWine(wineId).collectAsState(initial = emptyList())
+            if (wine == null) {
+                LaunchedEffect(wineId) {
+                    navController.popBackStack()
+                }
+            } else {
+                AddWineScreen(
+                    existingWine = wine,
+                    existingNotes = notes,
+                    onBack = { navController.popBackStack() },
+                    onSave = { _, _ -> },
+                    onRatingChange = { rating -> wineViewModel.updateRating(wine.id, rating) },
+                    onNoteAdded = { text -> wineViewModel.addNote(wine.id, text) },
+                )
+            }
         }
     }
 }
