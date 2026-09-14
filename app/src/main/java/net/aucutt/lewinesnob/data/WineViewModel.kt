@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import net.aucutt.lewinesnob.LeWineSnobApplication
+import java.util.UUID
 
 class WineViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as LeWineSnobApplication
@@ -30,6 +31,27 @@ class WineViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteWine(id: String) {
         viewModelScope.launch {
             wineRepository.deleteWine(id)
+        }
+    }
+
+    fun notesForWine(wineId: String) = tastingNoteRepository.observeNotesForWine(wineId)
+
+    fun updateRating(wineId: String, rating: Int) {
+        viewModelScope.launch {
+            wineRepository.updateRating(wineId, rating)
+        }
+    }
+
+    fun addNote(wineId: String, text: String) {
+        viewModelScope.launch {
+            tastingNoteRepository.addNote(
+                TastingNote(
+                    id = UUID.randomUUID().toString(),
+                    wineId = wineId,
+                    date = System.currentTimeMillis(),
+                    notes = text,
+                )
+            )
         }
     }
 }

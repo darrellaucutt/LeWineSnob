@@ -81,17 +81,24 @@ fun AddWineScreen(
     onBack: () -> Unit,
     onSave: (Wine, List<TastingNote>) -> Unit,
     modifier: Modifier = Modifier,
+    existingWine: Wine? = null,
+    existingNotes: List<TastingNote> = emptyList(),
+    onRatingChange: (Int) -> Unit = {},
+    onNoteAdded: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val canTakePhoto = context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
+    val isViewingExisting = existingWine != null
 
-    var brand by rememberSaveable { mutableStateOf("") }
-    var type by rememberSaveable { mutableStateOf("") }
-    var varietal by rememberSaveable { mutableStateOf("") }
-    var region by rememberSaveable { mutableStateOf("") }
-    var year by rememberSaveable { mutableStateOf("") }
-    var rating by rememberSaveable { mutableIntStateOf(0) }
-    var imageUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var brand by rememberSaveable(existingWine?.id) { mutableStateOf(existingWine?.brand.orEmpty()) }
+    var type by rememberSaveable(existingWine?.id) { mutableStateOf(existingWine?.type.orEmpty()) }
+    var varietal by rememberSaveable(existingWine?.id) { mutableStateOf(existingWine?.varietal.orEmpty()) }
+    var region by rememberSaveable(existingWine?.id) { mutableStateOf(existingWine?.region.orEmpty()) }
+    var year by rememberSaveable(existingWine?.id) {
+        mutableStateOf(existingWine?.year?.toString().orEmpty())
+    }
+    var rating by rememberSaveable(existingWine?.id) { mutableIntStateOf(existingWine?.rating ?: 0) }
+    var imageUri by rememberSaveable(existingWine?.id) { mutableStateOf(existingWine?.imageUri) }
     var pendingCameraUri by rememberSaveable { mutableStateOf<String?>(null) }
     var showPhotoSourcePicker by rememberSaveable { mutableStateOf(false) }
     var noteDraft by rememberSaveable { mutableStateOf("") }
@@ -126,7 +133,12 @@ fun AddWineScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text(text = stringResource(R.string.add_wine)) },
+                title = {
+                    Text(
+                        text = existingWine?.brand?.takeIf { it.isNotBlank() }
+                            ?: stringResource(R.string.add_wine)
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -149,11 +161,15 @@ fun AddWineScreen(
         ) {
             BottlePhoto(
                 imageUri = imageUri,
-                onClick = {
-                    if (canTakePhoto) {
-                        showPhotoSourcePicker = true
-                    } else {
-                        launchGallery()
+                onClick = if (isViewingExisting) {
+                    null
+                } else {
+                    {
+                        if (canTakePhoto) {
+                            showPhotoSourcePicker = true
+                        } else {
+                            launchGallery()
+                        }
                     }
                 }
             )
@@ -162,26 +178,30 @@ fun AddWineScreen(
                 onValueChange = { brand = it },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(text = stringResource(R.string.brand)) },
-                singleLine = true
+                singleLine = true,
+                enabled = !isViewingExisting
             )
             DropdownField(
                 label = stringResource(R.string.type),
                 options = WineOptions.types,
                 selected = type,
-                onSelected = { type = it }
+                onSelected = { type = it },
+                enabled = !isViewingExisting
             )
             DropdownField(
                 label = stringResource(R.string.varietal),
                 options = WineOptions.varietals,
                 selected = varietal,
-                onSelected = { varietal = it }
+                onSelected = { varietal = it },
+                enabled = !isViewingExisting
             )
             OutlinedTextField(
                 value = region,
                 onValueChange = { region = it },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(text = stringResource(R.string.region)) },
-                singleLine = true
+                singleLine = true,
+                enabled = !isViewingExisting
             )
             OutlinedTextField(
                 value = year,
@@ -191,6 +211,7 @@ fun AddWineScreen(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(text = stringResource(R.string.year)) },
                 singleLine = true,
+                enabled = !isViewingExisting,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
             Text(
@@ -199,6 +220,7 @@ fun AddWineScreen(
                 style = MaterialTheme.typography.titleSmall,
                 textAlign = TextAlign.Center
             )
+            val displayedRating = existingWine?.rating ?: rating
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(
@@ -208,77 +230,94 @@ fun AddWineScreen(
             ) {
                 (1..5).forEach { value ->
                     FilterChip(
-                        selected = rating == value,
-                        onClick = { rating = value },
+                        selected = displayedRating == value,
+                        onClick = {
+                            if (existingWine != null) {
+                                onRatingChange(value)
+                            } else {
+                                rating = value
+                            }
+                        },
                         label = { Text(text = value.toString()) }
                     )
                 }
             }
             TastingNotesSection(
-                notes = addedNotes,
+                notes = if (existingWine != null) {
+                    existingNotes.map { NoteDraft(it.id, it.date, it.notes) }
+                } else {
+                    addedNotes
+                },
                 draft = noteDraft,
                 onDraftChange = { noteDraft = it },
                 onAddNote = {
                     val text = noteDraft.trim()
                     if (text.isNotEmpty()) {
-                        addedNotes.add(
-                            NoteDraft(
-                                id = UUID.randomUUID().toString(),
-                                date = System.currentTimeMillis(),
-                                text = text,
-                            )
-                        )
-                        noteDraft = ""
-                    }
-                },
-                onDeleteNote = { addedNotes.remove(it) }
-            )
-            Button(
-                onClick = {
-                    val wineId = UUID.randomUUID().toString()
-                    val notesToSave = buildList {
-                        addAll(addedNotes)
-                        val leftover = noteDraft.trim()
-                        if (leftover.isNotEmpty()) {
-                            add(
+                        if (existingWine != null) {
+                            onNoteAdded(text)
+                        } else {
+                            addedNotes.add(
                                 NoteDraft(
                                     id = UUID.randomUUID().toString(),
                                     date = System.currentTimeMillis(),
-                                    text = leftover,
+                                    text = text,
                                 )
                             )
                         }
+                        noteDraft = ""
                     }
-                    onSave(
-                        Wine(
-                            id = wineId,
-                            brand = brand.trim(),
-                            type = type,
-                            varietal = varietal,
-                            region = region.trim(),
-                            year = year.toIntOrNull(),
-                            rating = rating,
-                            imageUri = imageUri
-                        ),
-                        notesToSave.map { draft ->
-                            TastingNote(
-                                id = draft.id,
-                                wineId = wineId,
-                                date = draft.date,
-                                notes = draft.text,
-                            )
-                        }
-                    )
                 },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = brand.isNotBlank()
-            ) {
-                Text(text = stringResource(R.string.save_wine))
+                onDeleteNote = { addedNotes.remove(it) },
+                canDeleteNotes = !isViewingExisting
+            )
+            if (!isViewingExisting) {
+                Button(
+                    onClick = {
+                        val wineId = UUID.randomUUID().toString()
+                        val notesToSave = buildList {
+                            addAll(addedNotes)
+                            val leftover = noteDraft.trim()
+                            if (leftover.isNotEmpty()) {
+                                add(
+                                    NoteDraft(
+                                        id = UUID.randomUUID().toString(),
+                                        date = System.currentTimeMillis(),
+                                        text = leftover,
+                                    )
+                                )
+                            }
+                        }
+                        onSave(
+                            Wine(
+                                id = wineId,
+                                brand = brand.trim(),
+                                type = type,
+                                varietal = varietal,
+                                region = region.trim(),
+                                year = year.toIntOrNull(),
+                                rating = rating,
+                                imageUri = imageUri
+                            ),
+                            notesToSave.map { draft ->
+                                TastingNote(
+                                    id = draft.id,
+                                    wineId = wineId,
+                                    date = draft.date,
+                                    notes = draft.text,
+                                )
+                            }
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = brand.isNotBlank()
+                ) {
+                    Text(text = stringResource(R.string.save_wine))
+                }
             }
         }
     }
 
-    if (showPhotoSourcePicker) {
+    if (showPhotoSourcePicker && !isViewingExisting) {
         PhotoSourceDialog(
             onTakePhoto = {
                 showPhotoSourcePicker = false
@@ -306,6 +345,7 @@ private fun TastingNotesSection(
     onDraftChange: (String) -> Unit,
     onAddNote: () -> Unit,
     onDeleteNote: (NoteDraft) -> Unit,
+    canDeleteNotes: Boolean = true,
 ) {
     val dateFormat = remember { DateFormat.getDateInstance(DateFormat.MEDIUM) }
 
@@ -331,11 +371,13 @@ private fun TastingNotesSection(
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
-                IconButton(onClick = { onDeleteNote(note) }) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = stringResource(R.string.delete_note)
-                    )
+                if (canDeleteNotes) {
+                    IconButton(onClick = { onDeleteNote(note) }) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.delete_note)
+                        )
+                    }
                 }
             }
         }
@@ -392,7 +434,7 @@ private fun PhotoSourceDialog(
 @Composable
 private fun BottlePhoto(
     imageUri: String?,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -408,7 +450,9 @@ private fun BottlePhoto(
         modifier = modifier
             .fillMaxWidth()
             .height(180.dp)
-            .clickable(onClick = onClick)
+            .then(
+                if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
+            )
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -422,7 +466,11 @@ private fun BottlePhoto(
                     contentScale = ContentScale.Crop
                 )
             } else {
-                Text(text = stringResource(R.string.bottle_photo_hint))
+                Text(
+                    text = stringResource(
+                        if (onClick != null) R.string.bottle_photo_hint else R.string.no_photo
+                    )
+                )
             }
         }
     }
@@ -435,34 +483,38 @@ private fun DropdownField(
     options: List<String>,
     selected: String,
     onSelected: (String) -> Unit,
+    enabled: Boolean = true,
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it }
+        expanded = expanded && enabled,
+        onExpandedChange = { if (enabled) expanded = it }
     ) {
         OutlinedTextField(
             value = selected,
             onValueChange = {},
             readOnly = true,
+            enabled = enabled,
             modifier = Modifier
                 .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                 .fillMaxWidth(),
             label = { Text(text = label) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded && enabled) }
         )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(text = option) },
-                    onClick = {
-                        onSelected(option)
-                        expanded = false
-                    }
-                )
+        if (enabled) {
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                options.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(text = option) },
+                        onClick = {
+                            onSelected(option)
+                            expanded = false
+                        }
+                    )
+                }
             }
         }
     }
