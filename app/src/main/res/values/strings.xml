@@ -19,4 +19,12 @@
     <string name="add_note">Add note</string>
     <string name="delete_note">Delete note</string>
     <string name="save_wine">Save Wine</string>
+    <string name="search_wines">Search wines</string>
+    <string name="no_wines">No wines saved yet</string>
+    <string name="no_matching_wines">No wines match your search</string>
+    <string name="delete_wine">Delete wine</string>
+    <string name="delete_wine_confirm">Delete %1$s? This also removes its tasting notes.</string>
+    <string name="delete">Delete</string>
+    <string name="unrated">Unrated</string>
+    <string name="rating_value">Rating %1$d</string>
 </resources>

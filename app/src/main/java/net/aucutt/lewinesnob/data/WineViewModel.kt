@@ -26,4 +26,10 @@ class WineViewModel(application: Application) : AndroidViewModel(application) {
             notes.forEach { tastingNoteRepository.addNote(it) }
         }
     }
+
+    fun deleteWine(id: String) {
+        viewModelScope.launch {
+            wineRepository.deleteWine(id)
+        }
+    }
 }

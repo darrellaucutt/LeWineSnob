@@ -22,6 +22,10 @@ class WineImageStore(private val context: Context) {
         return dest.toURI().toString()
     }
 
+    fun delete(wineId: String) {
+        File(photosDir, "$wineId.jpg").delete()
+    }
+
     fun open(uriString: String): InputStream? {
         val uri = uriString.toUri()
         return runCatching {

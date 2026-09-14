@@ -13,5 +13,6 @@ class WineRepository(
 
     suspend fun deleteWine(id: String) {
         wineDao.deleteById(id)
+        imageStore.delete(id)
     }
 }

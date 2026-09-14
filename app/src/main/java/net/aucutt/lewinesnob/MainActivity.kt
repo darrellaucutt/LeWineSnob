@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -13,6 +15,7 @@ import kotlinx.serialization.Serializable
 import net.aucutt.lewinesnob.data.WineViewModel
 import net.aucutt.lewinesnob.ui.AddWineScreen
 import net.aucutt.lewinesnob.ui.HomeScreen
+import net.aucutt.lewinesnob.ui.ListWinesScreen
 import net.aucutt.lewinesnob.ui.theme.LeWineSnobTheme
 
 @Serializable
@@ -20,6 +23,9 @@ private data object HomeRoute
 
 @Serializable
 private data object AddWineRoute
+
+@Serializable
+private data object ListWinesRoute
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,7 +49,7 @@ private fun LeWineSnobApp(wineViewModel: WineViewModel = viewModel()) {
         composable<HomeRoute> {
             HomeScreen(
                 onAddWine = { navController.navigate(AddWineRoute) },
-                onListWines = { }
+                onListWines = { navController.navigate(ListWinesRoute) }
             )
         }
         composable<AddWineRoute> {
@@ -53,6 +59,14 @@ private fun LeWineSnobApp(wineViewModel: WineViewModel = viewModel()) {
                     wineViewModel.addWine(wine, notes)
                     navController.popBackStack()
                 }
+            )
+        }
+        composable<ListWinesRoute> {
+            val wines by wineViewModel.wines.collectAsState()
+            ListWinesScreen(
+                wines = wines,
+                onBack = { navController.popBackStack() },
+                onDeleteWine = { wine -> wineViewModel.deleteWine(wine.id) }
             )
         }
     }
