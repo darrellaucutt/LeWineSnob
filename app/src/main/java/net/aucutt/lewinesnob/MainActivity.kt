@@ -8,12 +8,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
+import net.aucutt.lewinesnob.data.Wine
 import net.aucutt.lewinesnob.data.WineViewModel
 import net.aucutt.lewinesnob.ui.AddWineScreen
 import net.aucutt.lewinesnob.ui.HomeScreen
@@ -52,9 +60,18 @@ private fun LeWineSnobApp(wineViewModel: WineViewModel = viewModel()) {
         startDestination = HomeRoute
     ) {
         composable<HomeRoute> {
+            val wines by wineViewModel.wines.collectAsState()
+            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+            var featuredWine by remember { mutableStateOf<Wine?>(null) }
+            LaunchedEffect(lifecycleOwner, wines) {
+                lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                    featuredWine = wines.randomOrNull()
+                }
+            }
             HomeScreen(
                 onAddWine = { navController.navigate(AddWineRoute) },
-                onListWines = { navController.navigate(ListWinesRoute) }
+                onListWines = { navController.navigate(ListWinesRoute) },
+                featuredWine = featuredWine
             )
         }
         composable<AddWineRoute> {
