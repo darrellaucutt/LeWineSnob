@@ -65,14 +65,32 @@ fun HomeScreen(
                         .fillMaxWidth()
                         .height(220.dp)
                 )
-                Text(
-                    text = featuredWine.brand,
+                Column(
                     modifier = Modifier.widthIn(max = 320.dp),
-                    style = MaterialTheme.typography.titleLarge,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = featuredWine.brand,
+                        style = MaterialTheme.typography.titleLarge,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.rating_labeled,
+                            if (featuredWine.rating > 0) {
+                                featuredWine.rating.toString()
+                            } else {
+                                stringResource(R.string.unrated)
+                            }
+                        ),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.secondary,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
             Button(
                 onClick = onAddWine,
