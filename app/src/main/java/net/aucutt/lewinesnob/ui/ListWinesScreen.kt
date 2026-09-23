@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -53,6 +54,7 @@ import net.aucutt.lewinesnob.R
 import net.aucutt.lewinesnob.data.Wine
 import net.aucutt.lewinesnob.data.WineImageStore
 import net.aucutt.lewinesnob.ui.theme.LeWineSnobTheme
+import net.aucutt.lewinesnob.ui.theme.createGradient
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,7 +70,9 @@ fun ListWinesScreen(
     val filteredWines = wines.filter { it.matches(query) }
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize()
+            .background(createGradient()),
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(text = stringResource(R.string.list_wines)) },

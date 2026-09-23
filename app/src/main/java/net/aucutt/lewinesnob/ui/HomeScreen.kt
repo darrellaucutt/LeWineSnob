@@ -1,6 +1,8 @@
 package net.aucutt.lewinesnob.ui
 
 import android.graphics.BitmapFactory
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,12 +23,18 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -40,6 +48,7 @@ import net.aucutt.lewinesnob.R
 import net.aucutt.lewinesnob.data.Wine
 import net.aucutt.lewinesnob.data.WineImageStore
 import net.aucutt.lewinesnob.ui.theme.LeWineSnobTheme
+import net.aucutt.lewinesnob.ui.theme.createGradient
 
 @Composable
 fun HomeScreen(
@@ -48,65 +57,84 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     featuredWine: Wine? = null,
 ) {
+    var targetAlpha by remember { mutableFloatStateOf(0f) }
+    val animatedAlpha by animateFloatAsState(
+        targetValue = targetAlpha,
+        animationSpec = tween(durationMillis = 2000)
+    )
+
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
-        Column(
+        LaunchedEffect(Unit) {
+            targetAlpha = 1f
+        }
+        Box (
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .background(
+                    createGradient(animatedAlpha)
+                ),
+            contentAlignment = Alignment.Center
         ) {
-            if (featuredWine != null) {
-                FeaturedWineImage(
-                    imageUri = featuredWine.imageUri,
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (featuredWine != null) {
+                    FeaturedWineImage(
+                        imageUri = featuredWine.imageUri,
+                        modifier = Modifier
+                            .widthIn(max = 320.dp)
+                            .fillMaxWidth()
+                            .height(220.dp)
+                    )
+                    Column(
+                        modifier = Modifier.widthIn(max = 320.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = featuredWine.brand,
+                            style = MaterialTheme.typography.titleLarge,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.rating_labeled,
+                                if (featuredWine.rating > 0) {
+                                    featuredWine.rating.toString()
+                                } else {
+                                    stringResource(R.string.unrated)
+                                }
+                            ),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.secondary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+                Button(
+                    onClick = onAddWine,
                     modifier = Modifier
                         .widthIn(max = 320.dp)
                         .fillMaxWidth()
-                        .height(220.dp)
-                )
-                Column(
-                    modifier = Modifier.widthIn(max = 320.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = featuredWine.brand,
-                        style = MaterialTheme.typography.titleLarge,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.rating_labeled,
-                            if (featuredWine.rating > 0) {
-                                featuredWine.rating.toString()
-                            } else {
-                                stringResource(R.string.unrated)
-                            }
-                        ),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.secondary,
-                        textAlign = TextAlign.Center
-                    )
+                    Text(text = stringResource(R.string.add_wine))
                 }
-            }
-            Button(
-                onClick = onAddWine,
-                modifier = Modifier
-                    .widthIn(max = 320.dp)
-                    .fillMaxWidth()
-            ) {
-                Text(text = stringResource(R.string.add_wine))
-            }
-            OutlinedButton(
-                onClick = onListWines,
-                modifier = Modifier
-                    .widthIn(max = 320.dp)
-                    .fillMaxWidth()
-            ) {
-                Text(text = stringResource(R.string.list_wines))
+                OutlinedButton(
+                    onClick = onListWines,
+                    modifier = Modifier
+                        .widthIn(max = 320.dp)
+                        .fillMaxWidth()
+                ) {
+                    Text(text = stringResource(R.string.list_wines))
+                }
             }
         }
     }
