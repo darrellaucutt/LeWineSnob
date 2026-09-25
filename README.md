@@ -12,6 +12,20 @@ Android wine journal for logging bottles, ratings, photos, and tasting notes.
 
 All data is stored on the device with Room. Photos are copied into app storage so they survive after the gallery URI expires.
 
+## Screenshots
+
+### Home
+
+![Home screen with a featured bottle, rating, and Add Wine / List Wines buttons](landingPage.png)
+
+### List wines
+
+![Searchable cellar list with bottle photos, ratings, and delete actions](listWines.png)
+
+### Wine details
+
+![View wine screen with photo, fields, rating, and tasting notes](details.png)
+
 ## Requirements
 
 - Android Studio (AGP 9.2 / Gradle 9.4)
